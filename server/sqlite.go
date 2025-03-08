@@ -2,23 +2,21 @@ package server
 
 import (
 	"database/sql"
-	"fmt"
 
 	"github.com/cnosuke/mcp-notion/config"
+	"github.com/cockroachdb/errors"
 	_ "github.com/mattn/go-sqlite3"
 	"go.uber.org/zap"
 )
 
 // SQLiteServer - SQLite server structure
 type SQLiteServer struct {
-	DB     *sql.DB // 公開フィールドに変更
-	cfg    *config.Config
-	logger *zap.Logger
+	DB  *sql.DB
+	cfg *config.Config
 }
 
 // NewSQLiteServer - Create a new SQLite server
 func NewSQLiteServer(cfg *config.Config) (*SQLiteServer, error) {
-	logger := zap.L() // グローバルロガーを使用
 	zap.S().Info("creating new SQLite server",
 		zap.String("database_path", cfg.SQLite.Path))
 
@@ -27,7 +25,7 @@ func NewSQLiteServer(cfg *config.Config) (*SQLiteServer, error) {
 		zap.S().Error("failed to open SQLite database",
 			zap.String("database_path", cfg.SQLite.Path),
 			zap.Error(err))
-		return nil, fmt.Errorf("failed to open SQLite database: %w", err)
+		return nil, errors.Wrap(err, "failed to open SQLite database")
 	}
 
 	// Connection test
@@ -36,14 +34,13 @@ func NewSQLiteServer(cfg *config.Config) (*SQLiteServer, error) {
 		zap.S().Error("failed to connect to SQLite database",
 			zap.String("database_path", cfg.SQLite.Path),
 			zap.Error(err))
-		return nil, fmt.Errorf("failed to connect to SQLite database: %w", err)
+		return nil, errors.Wrap(err, "failed to connect to SQLite database")
 	}
 	zap.S().Info("successfully connected to SQLite database")
 
 	return &SQLiteServer{
-		DB:     db,
-		cfg:    cfg,
-		logger: logger,
+		DB:  db,
+		cfg: cfg,
 	}, nil
 }
 

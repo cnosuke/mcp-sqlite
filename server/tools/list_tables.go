@@ -3,8 +3,8 @@ package tools
 import (
 	"database/sql"
 	"encoding/json"
-	"fmt"
 
+	"github.com/cockroachdb/errors"
 	mcp "github.com/metoro-io/mcp-golang"
 	"go.uber.org/zap"
 )
@@ -27,7 +27,7 @@ func RegisterListTablesTools(server *mcp.Server, db *sql.DB) error {
 			rows, err := db.Query(query)
 			if err != nil {
 				zap.S().Error("failed to get table list", zap.Error(err))
-				return nil, fmt.Errorf("failed to get table list: %w", err)
+				return nil, errors.Wrap(err, "failed to get table list")
 			}
 			defer rows.Close()
 
@@ -40,7 +40,7 @@ func RegisterListTablesTools(server *mcp.Server, db *sql.DB) error {
 				var tableName string
 				if err := rows.Scan(&tableName); err != nil {
 					zap.S().Error("failed to scan table name", zap.Error(err))
-					return nil, fmt.Errorf("failed to scan table name: %w", err)
+					return nil, errors.Wrap(err, "failed to scan table name")
 				}
 				tables = append(tables, tableName)
 				tableCount++
@@ -51,7 +51,7 @@ func RegisterListTablesTools(server *mcp.Server, db *sql.DB) error {
 			jsonResult, err := json.Marshal(tables)
 			if err != nil {
 				zap.S().Error("failed to convert result to JSON", zap.Error(err))
-				return nil, fmt.Errorf("failed to convert result to JSON: %w", err)
+				return nil, errors.Wrap(err, "failed to convert result to JSON")
 			}
 
 			return mcp.NewToolResponse(mcp.NewTextContent(string(jsonResult))), nil
@@ -59,7 +59,7 @@ func RegisterListTablesTools(server *mcp.Server, db *sql.DB) error {
 
 	if err != nil {
 		zap.S().Error("failed to register list_tables tool", zap.Error(err))
-		return fmt.Errorf("failed to register list_tables tool: %w", err)
+		return errors.Wrap(err, "failed to register list_tables tool")
 	}
 
 	return nil

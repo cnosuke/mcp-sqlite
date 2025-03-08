@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/cockroachdb/errors"
 	mcp "github.com/metoro-io/mcp-golang"
 	"go.uber.org/zap"
 )
@@ -27,7 +28,7 @@ func RegisterWriteQueryTool(server *mcp.Server, db *sql.DB) error {
 				!strings.HasPrefix(trimmedQuery, "UPDATE") &&
 				!strings.HasPrefix(trimmedQuery, "DELETE") {
 				zap.S().Warn("invalid query type for write_query", zap.String("query", args.Query))
-				return nil, fmt.Errorf("write_query only supports INSERT, UPDATE, or DELETE queries")
+				return nil, errors.New("write_query only supports INSERT, UPDATE, or DELETE queries")
 			}
 
 			// Execute query
@@ -37,7 +38,7 @@ func RegisterWriteQueryTool(server *mcp.Server, db *sql.DB) error {
 				zap.S().Error("failed to execute write query",
 					zap.String("query", args.Query),
 					zap.Error(err))
-				return nil, fmt.Errorf("failed to execute write query: %w", err)
+				return nil, errors.Wrap(err, "failed to execute write query")
 			}
 
 			// Get affected rows count
@@ -82,7 +83,7 @@ func RegisterWriteQueryTool(server *mcp.Server, db *sql.DB) error {
 
 	if err != nil {
 		zap.S().Error("failed to register write_query tool", zap.Error(err))
-		return fmt.Errorf("failed to register write_query tool: %w", err)
+		return errors.Wrap(err, "failed to register write_query tool")
 	}
 
 	return nil

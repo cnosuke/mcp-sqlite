@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"github.com/cockroachdb/errors"
 	mcp "github.com/metoro-io/mcp-golang"
 	"go.uber.org/zap"
 )
@@ -29,7 +30,7 @@ func RegisterDescribeTableTool(server *mcp.Server, db *sql.DB) error {
 				zap.S().Error("failed to get table information",
 					zap.String("table_name", args.TableName),
 					zap.Error(err))
-				return nil, fmt.Errorf("failed to get table information: %w", err)
+				return nil, errors.Wrap(err, "failed to get table information")
 			}
 			defer rows.Close()
 
@@ -46,7 +47,7 @@ func RegisterDescribeTableTool(server *mcp.Server, db *sql.DB) error {
 
 				if err := rows.Scan(&cid, &name, &dataType, &notNull, &dfltValue, &pk); err != nil {
 					zap.S().Error("failed to scan column information", zap.Error(err))
-					return nil, fmt.Errorf("failed to scan column information: %w", err)
+					return nil, errors.Wrap(err, "failed to scan column information")
 				}
 
 				column := map[string]interface{}{
@@ -72,7 +73,7 @@ func RegisterDescribeTableTool(server *mcp.Server, db *sql.DB) error {
 			jsonResult, err := json.Marshal(columns)
 			if err != nil {
 				zap.S().Error("failed to convert result to JSON", zap.Error(err))
-				return nil, fmt.Errorf("failed to convert result to JSON: %w", err)
+				return nil, errors.Wrap(err, "failed to convert result to JSON")
 			}
 
 			return mcp.NewToolResponse(mcp.NewTextContent(string(jsonResult))), nil
@@ -80,7 +81,7 @@ func RegisterDescribeTableTool(server *mcp.Server, db *sql.DB) error {
 
 	if err != nil {
 		zap.S().Error("failed to register describe_table tool", zap.Error(err))
-		return fmt.Errorf("failed to register describe_table tool: %w", err)
+		return errors.Wrap(err, "failed to register describe_table tool")
 	}
 
 	return nil

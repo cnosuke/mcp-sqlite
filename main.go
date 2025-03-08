@@ -7,6 +7,7 @@ import (
 	"github.com/cnosuke/mcp-notion/config"
 	"github.com/cnosuke/mcp-notion/logger"
 	"github.com/cnosuke/mcp-notion/server"
+	"github.com/cockroachdb/errors"
 	"github.com/urfave/cli/v2"
 )
 
@@ -55,12 +56,12 @@ func main() {
 				// Read the configuration file
 				cfg, err := config.LoadConfig(configPath)
 				if err != nil {
-					return fmt.Errorf("failed to load configuration file: %w", err)
+					return errors.Wrap(err, "failed to load configuration file")
 				}
 
 				// Initialize logger
 				if err := logger.InitLogger(true, noLogs, logPath); err != nil {
-					return fmt.Errorf("failed to initialize logger: %w", err)
+					return errors.Wrap(err, "failed to initialize logger")
 				}
 				defer logger.Sync()
 

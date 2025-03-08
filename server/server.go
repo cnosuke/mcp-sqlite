@@ -1,14 +1,13 @@
 package server
 
 import (
-	"fmt"
-
 	mcp "github.com/metoro-io/mcp-golang"
 	"github.com/metoro-io/mcp-golang/transport/stdio"
 	"go.uber.org/zap"
 
 	"github.com/cnosuke/mcp-notion/config"
 	"github.com/cnosuke/mcp-notion/server/tools"
+	"github.com/cockroachdb/errors"
 )
 
 // Run - Execute the MCP server
@@ -44,7 +43,7 @@ func Run(cfg *config.Config) error {
 	err = server.Serve()
 	if err != nil {
 		zap.S().Error("failed to start server", zap.Error(err))
-		return fmt.Errorf("failed to start server: %w", err)
+		return errors.Wrap(err, "failed to start server")
 	}
 
 	zap.S().Info("mcp SQLite server started successfully",

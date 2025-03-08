@@ -3,9 +3,9 @@ package tools
 import (
 	"database/sql"
 	"encoding/json"
-	"fmt"
 	"strings"
 
+	"github.com/cockroachdb/errors"
 	mcp "github.com/metoro-io/mcp-golang"
 	"go.uber.org/zap"
 )
@@ -25,7 +25,7 @@ func RegisterReadQueryTool(server *mcp.Server, db *sql.DB) error {
 			// Verify query starts with SELECT
 			if !strings.HasPrefix(strings.ToUpper(strings.TrimSpace(args.Query)), "SELECT") {
 				zap.S().Warn("invalid query type for read_query", zap.String("query", args.Query))
-				return nil, fmt.Errorf("read_query only supports SELECT queries")
+				return nil, errors.New("read_query only supports SELECT queries")
 			}
 
 			// Execute query
@@ -35,7 +35,7 @@ func RegisterReadQueryTool(server *mcp.Server, db *sql.DB) error {
 				zap.S().Error("failed to execute query",
 					zap.String("query", args.Query),
 					zap.Error(err))
-				return nil, fmt.Errorf("failed to execute query: %w", err)
+				return nil, errors.Wrap(err, "failed to execute query")
 			}
 			defer rows.Close()
 
@@ -43,7 +43,7 @@ func RegisterReadQueryTool(server *mcp.Server, db *sql.DB) error {
 			columns, err := rows.Columns()
 			if err != nil {
 				zap.S().Error("failed to get column names", zap.Error(err))
-				return nil, fmt.Errorf("failed to get column names: %w", err)
+				return nil, errors.Wrap(err, "failed to get column names")
 			}
 			zap.S().Debug("query columns", zap.Strings("columns", columns))
 
@@ -66,7 +66,7 @@ func RegisterReadQueryTool(server *mcp.Server, db *sql.DB) error {
 					zap.S().Error("failed to scan row",
 						zap.Int("row", rowCount),
 						zap.Error(err))
-					return nil, fmt.Errorf("failed to scan row: %w", err)
+					return nil, errors.Wrap(err, "failed to scan row")
 				}
 
 				// Convert row to map
@@ -89,7 +89,7 @@ func RegisterReadQueryTool(server *mcp.Server, db *sql.DB) error {
 			jsonResult, err := json.Marshal(results)
 			if err != nil {
 				zap.S().Error("failed to convert results to JSON", zap.Error(err))
-				return nil, fmt.Errorf("failed to convert results to JSON: %w", err)
+				return nil, errors.Wrap(err, "failed to convert results to JSON")
 			}
 
 			return mcp.NewToolResponse(mcp.NewTextContent(string(jsonResult))), nil
@@ -97,7 +97,7 @@ func RegisterReadQueryTool(server *mcp.Server, db *sql.DB) error {
 
 	if err != nil {
 		zap.S().Error("failed to register read_query tool", zap.Error(err))
-		return fmt.Errorf("failed to register read_query tool: %w", err)
+		return errors.Wrap(err, "failed to register read_query tool")
 	}
 
 	return nil
