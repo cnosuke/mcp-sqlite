@@ -5,8 +5,8 @@ import (
 	"github.com/metoro-io/mcp-golang/transport/stdio"
 	"go.uber.org/zap"
 
-	"github.com/cnosuke/mcp-notion/config"
-	"github.com/cnosuke/mcp-notion/server/tools"
+	"github.com/cnosuke/mcp-sqlite/config"
+	"github.com/cnosuke/mcp-sqlite/server/tools"
 	"github.com/cockroachdb/errors"
 )
 
@@ -21,7 +21,7 @@ func Run(cfg *config.Config) error {
 	zap.S().Debug("creating SQLite server")
 	sqliteServer, err := NewSQLiteServer(cfg)
 	if err != nil {
-		zap.S().Error("failed to create SQLite server", zap.Error(err))
+		zap.S().Errorw("failed to create SQLite server", "error", err)
 		return err
 	}
 	defer sqliteServer.Close()
@@ -34,7 +34,7 @@ func Run(cfg *config.Config) error {
 	// Register all tools
 	zap.S().Debug("registering tools")
 	if err := tools.RegisterAllTools(server, sqliteServer.DB); err != nil {
-		zap.S().Error("failed to register tools", zap.Error(err))
+		zap.S().Errorw("failed to register tools", "error", err)
 		return err
 	}
 
@@ -42,12 +42,12 @@ func Run(cfg *config.Config) error {
 	zap.S().Info("starting MCP server")
 	err = server.Serve()
 	if err != nil {
-		zap.S().Error("failed to start server", zap.Error(err))
+		zap.S().Errorw("failed to start server", "error", err)
 		return errors.Wrap(err, "failed to start server")
 	}
 
-	zap.S().Info("mcp SQLite server started successfully",
-		zap.String("database_path", cfg.SQLite.Path))
+	zap.S().Infow("mcp SQLite server started successfully",
+		"database_path", cfg.SQLite.Path)
 
 	// Block to prevent program termination
 	zap.S().Info("waiting for requests...")

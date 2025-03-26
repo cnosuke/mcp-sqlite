@@ -1,4 +1,4 @@
-module github.com/cnosuke/mcp-notion
+module github.com/cnosuke/mcp-sqlite
 
 go 1.24.0
 

@@ -20,31 +20,31 @@ func RegisterWriteQueryTool(server *mcp.Server, db *sql.DB) error {
 	zap.S().Debug("registering write_query tool")
 	err := server.RegisterTool("write_query", "Execute write queries (INSERT, UPDATE, DELETE) to modify data in the database",
 		func(args WriteQueryArgs) (*mcp.ToolResponse, error) {
-			zap.S().Debug("executing write_query", zap.String("query", args.Query))
+			zap.S().Debugw("executing write_query", "query", args.Query)
 
 			// Verify query starts with appropriate write operation
 			trimmedQuery := strings.ToUpper(strings.TrimSpace(args.Query))
 			if !strings.HasPrefix(trimmedQuery, "INSERT") &&
 				!strings.HasPrefix(trimmedQuery, "UPDATE") &&
 				!strings.HasPrefix(trimmedQuery, "DELETE") {
-				zap.S().Warn("invalid query type for write_query", zap.String("query", args.Query))
+				zap.S().Warnw("invalid query type for write_query", "query", args.Query)
 				return nil, errors.New("write_query only supports INSERT, UPDATE, or DELETE queries")
 			}
 
 			// Execute query
-			zap.S().Debug("executing write query", zap.String("query", args.Query))
+			zap.S().Debugw("executing write query", "query", args.Query)
 			result, err := db.Exec(args.Query)
 			if err != nil {
-				zap.S().Error("failed to execute write query",
-					zap.String("query", args.Query),
-					zap.Error(err))
+				zap.S().Errorw("failed to execute write query",
+					"query", args.Query,
+					"error", err)
 				return nil, errors.Wrap(err, "failed to execute write query")
 			}
 
 			// Get affected rows count
 			rowsAffected, err := result.RowsAffected()
 			if err != nil {
-				zap.S().Warn("couldn't get rows affected", zap.Error(err))
+				zap.S().Warnw("couldn't get rows affected", "error", err)
 			}
 
 			// Get last inserted ID for INSERT operations
@@ -52,7 +52,7 @@ func RegisterWriteQueryTool(server *mcp.Server, db *sql.DB) error {
 			if strings.HasPrefix(trimmedQuery, "INSERT") {
 				lastInsertID, err = result.LastInsertId()
 				if err != nil {
-					zap.S().Warn("couldn't get last insert id", zap.Error(err))
+					zap.S().Warnw("couldn't get last insert id", "error", err)
 				}
 			}
 
@@ -74,15 +74,15 @@ func RegisterWriteQueryTool(server *mcp.Server, db *sql.DB) error {
 				responseMessage = fmt.Sprintf("delete successful: %d rows affected", rowsAffected)
 			}
 
-			zap.S().Info("write query executed successfully",
-				zap.String("operation", operation),
-				zap.Int64("rows_affected", rowsAffected))
+			zap.S().Infow("write query executed successfully",
+				"operation", operation,
+				"rows_affected", rowsAffected)
 
 			return mcp.NewToolResponse(mcp.NewTextContent(responseMessage)), nil
 		})
 
 	if err != nil {
-		zap.S().Error("failed to register write_query tool", zap.Error(err))
+		zap.S().Errorw("failed to register write_query tool", "error", err)
 		return errors.Wrap(err, "failed to register write_query tool")
 	}
 

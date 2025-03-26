@@ -1,2 +1,5 @@
+log: 'path/to/mcp-sqlite.log'
+debug: false
+
 sqlite:
   path: "./sqlite.db"

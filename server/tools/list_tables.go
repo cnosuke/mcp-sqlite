@@ -23,10 +23,10 @@ func RegisterListTablesTools(server *mcp.Server, db *sql.DB) error {
 
 			// Get table list from SQLite system tables
 			const query = "SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'"
-			zap.S().Debug("querying for tables", zap.String("query", query))
+			zap.S().Debugw("querying for tables", "query", query)
 			rows, err := db.Query(query)
 			if err != nil {
-				zap.S().Error("failed to get table list", zap.Error(err))
+				zap.S().Errorw("failed to get table list", "error", err)
 				return nil, errors.Wrap(err, "failed to get table list")
 			}
 			defer rows.Close()
@@ -39,18 +39,18 @@ func RegisterListTablesTools(server *mcp.Server, db *sql.DB) error {
 			for rows.Next() {
 				var tableName string
 				if err := rows.Scan(&tableName); err != nil {
-					zap.S().Error("failed to scan table name", zap.Error(err))
+					zap.S().Errorw("failed to scan table name", "error", err)
 					return nil, errors.Wrap(err, "failed to scan table name")
 				}
 				tables = append(tables, tableName)
 				tableCount++
 			}
-			zap.S().Debug("found tables", zap.Int("count", tableCount), zap.Strings("tables", tables))
+			zap.S().Debugw("found tables", "count", tableCount, "tables", tables)
 
 			// Convert result to JSON
 			jsonResult, err := json.Marshal(tables)
 			if err != nil {
-				zap.S().Error("failed to convert result to JSON", zap.Error(err))
+				zap.S().Errorw("failed to convert result to JSON", "error", err)
 				return nil, errors.Wrap(err, "failed to convert result to JSON")
 			}
 
@@ -58,7 +58,7 @@ func RegisterListTablesTools(server *mcp.Server, db *sql.DB) error {
 		})
 
 	if err != nil {
-		zap.S().Error("failed to register list_tables tool", zap.Error(err))
+		zap.S().Errorw("failed to register list_tables tool", "error", err)
 		return errors.Wrap(err, "failed to register list_tables tool")
 	}
 

@@ -20,21 +20,21 @@ func RegisterReadQueryTool(server *mcp.Server, db *sql.DB) error {
 	zap.S().Debug("registering read_query tool")
 	err := server.RegisterTool("read_query", "Execute SELECT queries to read data from the database",
 		func(args ReadQueryArgs) (*mcp.ToolResponse, error) {
-			zap.S().Debug("executing read_query", zap.String("query", args.Query))
+			zap.S().Debugw("executing read_query", "query", args.Query)
 
 			// Verify query starts with SELECT
 			if !strings.HasPrefix(strings.ToUpper(strings.TrimSpace(args.Query)), "SELECT") {
-				zap.S().Warn("invalid query type for read_query", zap.String("query", args.Query))
+				zap.S().Warnw("invalid query type for read_query", "query", args.Query)
 				return nil, errors.New("read_query only supports SELECT queries")
 			}
 
 			// Execute query
-			zap.S().Debug("executing SELECT query", zap.String("query", args.Query))
+			zap.S().Debugw("executing SELECT query", "query", args.Query)
 			rows, err := db.Query(args.Query)
 			if err != nil {
-				zap.S().Error("failed to execute query",
-					zap.String("query", args.Query),
-					zap.Error(err))
+				zap.S().Errorw("failed to execute query",
+					"query", args.Query,
+					"error", err)
 				return nil, errors.Wrap(err, "failed to execute query")
 			}
 			defer rows.Close()
@@ -42,10 +42,10 @@ func RegisterReadQueryTool(server *mcp.Server, db *sql.DB) error {
 			// Get results
 			columns, err := rows.Columns()
 			if err != nil {
-				zap.S().Error("failed to get column names", zap.Error(err))
+				zap.S().Errorw("failed to get column names", "error", err)
 				return nil, errors.Wrap(err, "failed to get column names")
 			}
-			zap.S().Debug("query columns", zap.Strings("columns", columns))
+			zap.S().Debugw("query columns", "columns", columns)
 
 			// Slice to store results
 			var results []map[string]interface{}
@@ -63,9 +63,9 @@ func RegisterReadQueryTool(server *mcp.Server, db *sql.DB) error {
 
 				// Scan the row
 				if err := rows.Scan(valuePtrs...); err != nil {
-					zap.S().Error("failed to scan row",
-						zap.Int("row", rowCount),
-						zap.Error(err))
+					zap.S().Errorw("failed to scan row",
+						"row", rowCount,
+						"error", err)
 					return nil, errors.Wrap(err, "failed to scan row")
 				}
 
@@ -83,12 +83,12 @@ func RegisterReadQueryTool(server *mcp.Server, db *sql.DB) error {
 				}
 				results = append(results, row)
 			}
-			zap.S().Debug("query completed", zap.Int("rows_returned", rowCount))
+			zap.S().Debugw("query completed", "rows_returned", rowCount)
 
 			// Convert results to JSON
 			jsonResult, err := json.Marshal(results)
 			if err != nil {
-				zap.S().Error("failed to convert results to JSON", zap.Error(err))
+				zap.S().Errorw("failed to convert results to JSON", "error", err)
 				return nil, errors.Wrap(err, "failed to convert results to JSON")
 			}
 
@@ -96,7 +96,7 @@ func RegisterReadQueryTool(server *mcp.Server, db *sql.DB) error {
 		})
 
 	if err != nil {
-		zap.S().Error("failed to register read_query tool", zap.Error(err))
+		zap.S().Errorw("failed to register read_query tool", "error", err)
 		return errors.Wrap(err, "failed to register read_query tool")
 	}
 

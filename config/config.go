@@ -6,6 +6,8 @@ import (
 
 // Config - Application configuration
 type Config struct {
+	Log    string `yaml:"log" default:"" env:"LOG_PATH"`
+	Debug  bool   `yaml:"debug" default:"false" env:"DEBUG"`
 	SQLite struct {
 		Path string `yaml:"path" default:"./sqlite.db" env:"SQLITE_PATH"`
 	} `yaml:"sqlite"`

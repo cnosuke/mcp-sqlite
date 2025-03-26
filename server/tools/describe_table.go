@@ -20,16 +20,16 @@ func RegisterDescribeTableTool(server *mcp.Server, db *sql.DB) error {
 	zap.S().Debug("registering describe_table tool")
 	err := server.RegisterTool("describe_table", "View schema information for a specific table",
 		func(args DescribeTableArgs) (*mcp.ToolResponse, error) {
-			zap.S().Debug("executing describe_table", zap.String("table_name", args.TableName))
+			zap.S().Debugw("executing describe_table", "table_name", args.TableName)
 
 			// Get table schema information
 			query := fmt.Sprintf("PRAGMA table_info(%s)", args.TableName)
-			zap.S().Debug("querying table schema", zap.String("query", query))
+			zap.S().Debugw("querying table schema", "query", query)
 			rows, err := db.Query(query)
 			if err != nil {
-				zap.S().Error("failed to get table information",
-					zap.String("table_name", args.TableName),
-					zap.Error(err))
+				zap.S().Errorw("failed to get table information",
+					"table_name", args.TableName,
+					"error", err)
 				return nil, errors.Wrap(err, "failed to get table information")
 			}
 			defer rows.Close()
@@ -46,7 +46,7 @@ func RegisterDescribeTableTool(server *mcp.Server, db *sql.DB) error {
 				var dfltValue interface{}
 
 				if err := rows.Scan(&cid, &name, &dataType, &notNull, &dfltValue, &pk); err != nil {
-					zap.S().Error("failed to scan column information", zap.Error(err))
+					zap.S().Errorw("failed to scan column information", "error", err)
 					return nil, errors.Wrap(err, "failed to scan column information")
 				}
 
@@ -59,20 +59,20 @@ func RegisterDescribeTableTool(server *mcp.Server, db *sql.DB) error {
 				}
 				columns = append(columns, column)
 				columnCount++
-				zap.S().Debug("column found",
-					zap.String("name", name),
-					zap.String("type", dataType),
-					zap.Bool("not_null", notNull == 1),
-					zap.Bool("primary_key", pk == 1))
+				zap.S().Debugw("column found",
+					"name", name,
+					"type", dataType,
+					"not_null", notNull == 1,
+					"primary_key", pk == 1)
 			}
-			zap.S().Debug("table schema retrieved",
-				zap.String("table_name", args.TableName),
-				zap.Int("column_count", columnCount))
+			zap.S().Debugw("table schema retrieved",
+				"table_name", args.TableName,
+				"column_count", columnCount)
 
 			// Convert result to JSON
 			jsonResult, err := json.Marshal(columns)
 			if err != nil {
-				zap.S().Error("failed to convert result to JSON", zap.Error(err))
+				zap.S().Errorw("failed to convert result to JSON", "error", err)
 				return nil, errors.Wrap(err, "failed to convert result to JSON")
 			}
 
@@ -80,7 +80,7 @@ func RegisterDescribeTableTool(server *mcp.Server, db *sql.DB) error {
 		})
 
 	if err != nil {
-		zap.S().Error("failed to register describe_table tool", zap.Error(err))
+		zap.S().Errorw("failed to register describe_table tool", "error", err)
 		return errors.Wrap(err, "failed to register describe_table tool")
 	}
 
