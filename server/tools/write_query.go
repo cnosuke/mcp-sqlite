@@ -1,16 +1,17 @@
 package tools
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
 	"strings"
 
-	"github.com/cockroachdb/errors"
-	mcp "github.com/metoro-io/mcp-golang"
+	"github.com/mark3labs/mcp-go/mcp"
+	"github.com/mark3labs/mcp-go/server"
 	"go.uber.org/zap"
 )
 
-// WriteQueryArgs - Arguments for write_query tool
+// WriteQueryArgs - Arguments for write_query tool (kept for testing compatibility)
 type WriteQueryArgs struct {
 	Query string `json:"query" jsonschema:"description=The SQL write query (INSERT, UPDATE, DELETE) to execute. Supports multiple statements separated by semicolons and transactions (BEGIN, COMMIT, ROLLBACK)"`
 }
@@ -57,7 +58,7 @@ func isValidWriteOperation(stmt string) (bool, string) {
 }
 
 // executeStatements - 複数のステートメントを実行
-func executeStatements(db *sql.DB, stmts []string) ([]statementResult, error) {
+func executeStatements(ctx context.Context, db *sql.DB, stmts []string) ([]statementResult, error) {
 	var results []statementResult
 	var tx *sql.Tx
 	inTransaction := false
@@ -81,7 +82,7 @@ func executeStatements(db *sql.DB, stmts []string) ([]statementResult, error) {
 			}
 
 			var err error
-			tx, err = db.Begin()
+			tx, err = db.BeginTx(ctx, nil)
 			if err != nil {
 				result.Error = err
 				results = append(results, result)
@@ -133,9 +134,9 @@ func executeStatements(db *sql.DB, stmts []string) ([]statementResult, error) {
 		var err error
 
 		if inTransaction {
-			sqlResult, err = tx.Exec(stmt)
+			sqlResult, err = tx.ExecContext(ctx, stmt)
 		} else {
-			sqlResult, err = db.Exec(stmt)
+			sqlResult, err = db.ExecContext(ctx, stmt)
 		}
 
 		if err != nil {
@@ -218,41 +219,52 @@ func formatResponse(results []statementResult) string {
 }
 
 // RegisterWriteQueryTool - Register the write_query tool
-func RegisterWriteQueryTool(server *mcp.Server, db *sql.DB) error {
+func RegisterWriteQueryTool(mcpServer *server.MCPServer, db *sql.DB) error {
 	zap.S().Debug("registering write_query tool")
-	err := server.RegisterTool("write_query", "Execute write queries (INSERT, UPDATE, DELETE) to modify data in the database. Supports multiple statements separated by semicolons and transactions (BEGIN, COMMIT, ROLLBACK)",
-		func(args WriteQueryArgs) (*mcp.ToolResponse, error) {
-			zap.S().Debugw("executing write_query", "query", args.Query)
 
-			// Split query into multiple statements
-			statements := splitQueries(args.Query)
-			if len(statements) == 0 {
-				zap.S().Warnw("empty query", "query", args.Query)
-				return nil, errors.New("empty query")
-			}
+	// Define the tool
+	tool := mcp.NewTool("write_query",
+		mcp.WithDescription("Execute write queries (INSERT, UPDATE, DELETE) to modify data in the database. Supports multiple statements separated by semicolons and transactions (BEGIN, COMMIT, ROLLBACK)"),
+		mcp.WithString("query",
+			mcp.Description("The SQL write query (INSERT, UPDATE, DELETE) to execute"),
+			mcp.Required(),
+		),
+	)
 
-			// Execute statements
-			zap.S().Debugw("executing statements", "count", len(statements))
-			results, err := executeStatements(db, statements)
-			if err != nil {
-				zap.S().Errorw("failed to execute statements",
-					"error", err)
-				return nil, errors.Wrap(err, "failed to execute statements")
-			}
+	// Add the tool handler
+	mcpServer.AddTool(tool, func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+		// Extract query parameter
+		query, ok := request.Params.Arguments["query"].(string)
+		if !ok || query == "" {
+			return mcp.NewToolResultError("query parameter is required"), nil
+		}
 
-			// Format response
-			responseMessage := formatResponse(results)
-			zap.S().Infow("statements executed",
-				"total", len(statements),
-				"successful", len(results))
+		zap.S().Debugw("executing write_query", "query", query)
 
-			return mcp.NewToolResponse(mcp.NewTextContent(responseMessage)), nil
-		})
+		// Split query into multiple statements
+		statements := splitQueries(query)
+		if len(statements) == 0 {
+			zap.S().Warnw("empty query", "query", query)
+			return mcp.NewToolResultError("empty query"), nil
+		}
 
-	if err != nil {
-		zap.S().Errorw("failed to register write_query tool", "error", err)
-		return errors.Wrap(err, "failed to register write_query tool")
-	}
+		// Execute statements
+		zap.S().Debugw("executing statements", "count", len(statements))
+		results, err := executeStatements(ctx, db, statements)
+		if err != nil {
+			zap.S().Errorw("failed to execute statements",
+				"error", err)
+			return mcp.NewToolResultError(err.Error()), nil
+		}
+
+		// Format response
+		responseMessage := formatResponse(results)
+		zap.S().Infow("statements executed",
+			"total", len(statements),
+			"successful", len(results))
+
+		return mcp.NewToolResultText(responseMessage), nil
+	})
 
 	return nil
 }
