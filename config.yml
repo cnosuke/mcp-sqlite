@@ -1,4 +1,4 @@
-log: 'path/to/mcp-sqlite.log'
+log: 'mcp-sqlite.log'
 debug: false
 
 sqlite:

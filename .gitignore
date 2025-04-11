@@ -3,3 +3,5 @@ dist/
 *.md
 *.db
 *.log
+log
+temp
